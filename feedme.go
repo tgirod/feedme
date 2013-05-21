@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	fp "github.com/iand/feedparser"
 	"io"
@@ -11,126 +12,138 @@ import (
 	"time"
 )
 
-type SourceList struct {
-	Filename string
-	Sources  []Source
-}
+var (
+	config = flag.String("config", os.ExpandEnv("${HOME}/.feedme"), "config file to use. default is $HOME/.feedme")
+	fetch  = flag.Bool("fetch", false, "fetch new items")
+	source = flag.String("add", "", "add a new feed")
+)
 
 type Source struct {
-	Title  string
 	Url    string
 	Latest time.Time
 }
 
-type Link struct {
-	Url   string
-	Title string
-	When  time.Time
-}
+type SourceList []*Source
 
-func NewSourceList(filename string) *SourceList {
-	sl := SourceList{Filename: filename}
-	if err := sl.Load(); err != nil {
-		log.Fatal(err)
-	}
-	return &sl
-}
-
-func (sl *SourceList) Load() error {
-	file, err := os.Open(sl.Filename)
+func (sl *SourceList) Load(filename string) {
+	// open file
+	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, os.ModePerm)
 	defer file.Close()
 	if err != nil {
-		return err
+		log.Println(err)
+		return
 	}
+	// load json content
 	dec := json.NewDecoder(file)
 	for {
-		var s Source
-		err := dec.Decode(&s)
+		var source Source
+		err := dec.Decode(&source)
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return err
+			log.Println(err)
+			return
 		}
-		sl.Sources = append(sl.Sources, s)
+		(*sl) = append((*sl), &source)
 	}
-	return nil
 }
 
-func (sl *SourceList) Save() error {
-	file, err := os.OpenFile(sl.Filename, os.O_RDWR|os.O_TRUNC, os.ModePerm)
+func (sl *SourceList) Save(filename string) {
+	// open file
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC|os.O_CREATE, os.ModePerm)
 	defer file.Close()
 	if err != nil {
-		return err
+		fmt.Println(err)
 	}
 	enc := json.NewEncoder(file)
-	for _, s := range sl.Sources {
-		err := enc.Encode(s)
+	for _, feed := range *sl {
+		err := enc.Encode(feed)
 		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (sl *SourceList) AddSource(url string) {
-	s := Source{Url: url}
-	for _, s = range sl.Sources {
-		if s.Url == url {
+			log.Println(err)
 			return
 		}
 	}
-	sl.Sources = append(sl.Sources, s)
 }
 
-func (sl *SourceList) Fetch() (map[Source][]Link, error) {
-	links := map[Source][]Link{}
-	for _, s := range sl.Sources {
-		l, err := s.Fetch()
-		if err != nil {
-			return nil, err
-		}
-		links[s] = l
+func (sl *SourceList) AddSource(url string) {
+	(*sl) = append((*sl), &Source{Url: url})
+}
+
+func (sl *SourceList) Fetch() []*fp.Feed {
+	fmt.Printf("Fetching %d feed(s)\n", len((*sl)))
+	// launch parallel fetch
+	c := make(chan *fp.Feed)
+	for _, source := range *sl {
+		go source.Fetch(c)
 	}
-	return links, nil
+	// gather results
+	feeds := []*fp.Feed{}
+	for _, _ = range *sl {
+		f := <-c
+		fmt.Print(".")
+		if f != nil {
+			feeds = append(feeds, f)
+		}
+	}
+	fmt.Println("done")
+	return feeds
 }
 
-func (s *Source) Fetch() ([]Link, error) {
+func (s *Source) Fetch(c chan *fp.Feed) {
 	// grab feed
 	resp, err := http.Get(s.Url)
 	if err != nil {
-		return nil, err
+		log.Println(err)
+		c <- nil
+		return
 	}
 	// parse feed
 	feed, err := fp.NewFeed(resp.Body)
 	if err != nil {
-		return nil, err
+		log.Println(err)
+		c <- nil
+		return
 	}
-	// get feed title
-	s.Title = feed.Title
-	// get new items
-	links := []Link{}
-	for _, it := range feed.Items {
-		if !it.When.After(s.Latest) {
+	// drop the old items
+	items := []*fp.FeedItem{}
+	for _, item := range feed.Items {
+		if item.When.After(s.Latest) {
+			items = append(items, item)
+		} else {
 			break
 		}
-		links = append(links, Link{it.Link, it.Title, it.When})
 	}
-	// change latest fetch
-	if len(links) > 0 {
-		s.Latest = links[0].When
+	feed.Items = items
+	// update Latest item seen
+	if len(feed.Items) > 0 {
+		s.Latest = feed.Items[0].When
 	}
-	return links, nil
+	// return result
+	if len(items) == 0 {
+		c <- nil
+		return
+	} else {
+		c <- feed
+	}
+}
+
+func init() {
+	flag.Parse()
 }
 
 func main() {
-	sl := NewSourceList("feedlist.json")
-	sl.AddSource("http://www.questionablecontent.net/QCRSS.xml")
-	items, err := sl.Sources[0].Fetch()
-	if err != nil {
-		log.Fatal(err)
+	sl := SourceList{}
+	sl.Load(*config)
+
+	if *source != "" {
+		sl.AddSource(*source)
 	}
-	for _, i := range items {
-		fmt.Println(i)
+
+	if *fetch {
+		feeds := sl.Fetch()
+		for _, f := range feeds {
+			fmt.Printf("%d\t%s\n", len(f.Items), f.Title)
+		}
 	}
-	sl.Save()
+	sl.Save(*config)
 }
