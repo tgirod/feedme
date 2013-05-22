@@ -9,18 +9,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
-var (
-	config = flag.String("config", os.ExpandEnv("${HOME}/.feedme"), "config file to use. default is $HOME/.feedme")
-	fetch  = flag.Bool("fetch", false, "fetch new items")
-	source = flag.String("add", "", "add a new feed")
-)
+var config = flag.String("config", os.ExpandEnv("${HOME}/.feedme"), "config file to use. default is $HOME/.feedme")
 
 type Source struct {
 	Url    string
-	Latest time.Time
+	Latest string
 }
 
 type SourceList []*Source
@@ -107,7 +102,7 @@ func (s *Source) Fetch(c chan *fp.Feed) {
 	// drop the old items
 	items := []*fp.FeedItem{}
 	for _, item := range feed.Items {
-		if item.When.After(s.Latest) {
+		if item.Link != s.Latest {
 			items = append(items, item)
 		} else {
 			break
@@ -116,7 +111,7 @@ func (s *Source) Fetch(c chan *fp.Feed) {
 	feed.Items = items
 	// update Latest item seen
 	if len(feed.Items) > 0 {
-		s.Latest = feed.Items[0].When
+		s.Latest = feed.Items[0].Link
 	}
 	// return result
 	if len(items) == 0 {
@@ -127,23 +122,46 @@ func (s *Source) Fetch(c chan *fp.Feed) {
 	}
 }
 
+func PrintFeed(f *fp.Feed) {
+	fmt.Println(f.Title)
+	for _, i := range f.Items {
+		fmt.Printf("\t[%s](%s)\n", i.Title, i.Link)
+	}
+}
+
 func init() {
 	flag.Parse()
+	if flag.NArg() == 0 {
+		os.Exit(0)
+	}
 }
 
 func main() {
 	sl := SourceList{}
 	sl.Load(*config)
 
-	if *source != "" {
-		sl.AddSource(*source)
+	if flag.NArg() == 0 {
+		os.Exit(0)
 	}
 
-	if *fetch {
+	switch flag.Arg(0) {
+	case "add":
+		for _, source := range flag.Args()[1:] {
+			sl.AddSource(source)
+		}
+		sl.Save(*config)
+	case "fetch":
 		feeds := sl.Fetch()
 		for _, f := range feeds {
-			fmt.Printf("%d\t%s\n", len(f.Items), f.Title)
+			PrintFeed(f)
 		}
+		sl.Save(*config)
+	case "list":
+		for _, source := range sl {
+			fmt.Println(source.Url)
+		}
+	default:
+		os.Exit(0)
 	}
-	sl.Save(*config)
+
 }
