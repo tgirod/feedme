@@ -61,6 +61,11 @@ func (sl *SourceList) Save(filename string) {
 }
 
 func (sl *SourceList) AddSource(url string) {
+	for _, f := range *sl {
+		if url == f.Url {
+			return
+		}
+	}
 	(*sl) = append((*sl), &Source{Url: url})
 }
 
