@@ -77,24 +77,20 @@ func (sl *SourceList) DeleteSource(url string) {
 	}
 }
 
-func (sl *SourceList) Fetch() []*fp.Feed {
+func (sl *SourceList) Fetch() {
 	fmt.Printf("Fetching %d feed(s)\n", len((*sl)))
 	// launch parallel fetch
 	c := make(chan *fp.Feed)
 	for _, source := range *sl {
 		go source.Fetch(c)
 	}
-	// gather results
-	feeds := []*fp.Feed{}
+	// print results as they arrive
 	for _, _ = range *sl {
 		f := <-c
-		fmt.Print(".")
 		if f != nil {
-			feeds = append(feeds, f)
+			PrintFeed(f)
 		}
 	}
-	fmt.Println("done")
-	return feeds
 }
 
 func (s *Source) Fetch(c chan *fp.Feed) {
@@ -136,9 +132,9 @@ func (s *Source) Fetch(c chan *fp.Feed) {
 }
 
 func PrintFeed(f *fp.Feed) {
-	fmt.Println(f.Title)
+	fmt.Printf("\n%s\n",f.Title)
 	for _, i := range f.Items {
-		fmt.Printf("\t[%s](%s)\n", i.Title, i.Link)
+		fmt.Printf(" - [%s](%s)\n", i.Title, i.Link)
 	}
 }
 
@@ -169,10 +165,7 @@ func main() {
 		}
 		sl.Save(*config)
 	case "fetch":
-		feeds := sl.Fetch()
-		for _, f := range feeds {
-			PrintFeed(f)
-		}
+		sl.Fetch()
 		sl.Save(*config)
 	case "list":
 		for _, source := range sl {
