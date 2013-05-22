@@ -62,11 +62,19 @@ func (sl *SourceList) Save(filename string) {
 
 func (sl *SourceList) AddSource(url string) {
 	for _, f := range *sl {
-		if url == f.Url {
+		if f.Url == url {
 			return
 		}
 	}
 	(*sl) = append((*sl), &Source{Url: url})
+}
+
+func (sl *SourceList) DeleteSource(url string) {
+	for i, s := range *sl {
+		if s.Url == url {
+			*sl = append((*sl)[:i], (*sl)[i+1:]...)
+		}
+	}
 }
 
 func (sl *SourceList) Fetch() []*fp.Feed {
@@ -153,6 +161,11 @@ func main() {
 	case "add":
 		for _, source := range flag.Args()[1:] {
 			sl.AddSource(source)
+		}
+		sl.Save(*config)
+	case "delete":
+		for _, source := range flag.Args()[1:] {
+			sl.DeleteSource(source)
 		}
 		sl.Save(*config)
 	case "fetch":
