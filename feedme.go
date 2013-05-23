@@ -78,7 +78,6 @@ func (sl *SourceList) DeleteSource(url string) {
 }
 
 func (sl *SourceList) Fetch() {
-	fmt.Printf("Fetching %d feed(s)\n", len((*sl)))
 	// launch parallel fetch
 	c := make(chan *fp.Feed)
 	for _, source := range *sl {
