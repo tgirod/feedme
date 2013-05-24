@@ -7,8 +7,9 @@ feedme is a small command-line feed reader.
 - `feedme list`: list all the fetched feeds
 - `feedme fetch` for each feed, print the title+URL of each new item
 
+There is also a small helper zsh script that runs `feedme fetch` and email its output if there is something new. This is convenient to run as cron job
+
 # Possible improvements
 
 - replace the feedparser dependency with custom code based on encoding/xml, in order to parse only the new posts
-- email the results, like rss2email ? this could be done by piping the output to a MDA ...
 
