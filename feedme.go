@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-var config = flag.String("config", os.ExpandEnv("${HOME}/.feedme"), "config file to use. default is $HOME/.feedme")
+var configFile = flag.String("config", os.ExpandEnv("${HOME}/.feedme"), "config file to use. default is $HOME/.feedme")
 
 type Source struct {
 	Url    string
@@ -146,7 +146,7 @@ func init() {
 
 func main() {
 	sl := SourceList{}
-	sl.Load(*config)
+	sl.Load(*configFile)
 
 	if flag.NArg() == 0 {
 		os.Exit(0)
@@ -157,15 +157,15 @@ func main() {
 		for _, source := range flag.Args()[1:] {
 			sl.AddSource(source)
 		}
-		sl.Save(*config)
+		sl.Save(*configFile)
 	case "delete":
 		for _, source := range flag.Args()[1:] {
 			sl.DeleteSource(source)
 		}
-		sl.Save(*config)
+		sl.Save(*configFile)
 	case "fetch":
 		sl.Fetch()
-		sl.Save(*config)
+		sl.Save(*configFile)
 	case "list":
 		for _, source := range sl {
 			fmt.Println(source.Url)
