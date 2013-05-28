@@ -84,12 +84,15 @@ func (sl *SourceList) Fetch() {
 		go source.Fetch(c)
 	}
 	// print results as they arrive
+	nb := 0
 	for _, _ = range *sl {
 		f := <-c
 		if f != nil {
+			nb++
 			PrintFeed(f)
 		}
 	}
+	log.Printf("parsed %d feeds, %d with new contents\n", len(*sl), nb)
 }
 
 func (s *Source) Fetch(c chan *fp.Feed) {
@@ -131,7 +134,7 @@ func (s *Source) Fetch(c chan *fp.Feed) {
 }
 
 func PrintFeed(f *fp.Feed) {
-	fmt.Printf("\n%s\n",f.Title)
+	fmt.Printf("\n%s\n", f.Title)
 	for _, i := range f.Items {
 		fmt.Printf(" - [%s](%s)\n", i.Title, i.Link)
 	}
