@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var configFile = flag.String("config", os.ExpandEnv("${HOME}/.feedme"), "config file to use. default is $HOME/.feedme")
@@ -134,7 +135,11 @@ func (s *Source) Fetch(c chan *fp.Feed) {
 }
 
 func PrintFeed(f *fp.Feed) {
-	fmt.Printf("\n%s\n", f.Title)
+	title := strings.TrimSpace(f.Title)
+	if title == "" {
+		title = "[nameless feed]"
+	}
+	fmt.Printf("\n%s\n", title)
 	for _, i := range f.Items {
 		fmt.Printf(" - [%s](%s)\n", i.Title, i.Link)
 	}
