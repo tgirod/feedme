@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	fp "github.com/iand/feedparser"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -135,13 +136,13 @@ func (s *Source) Fetch(c chan *fp.Feed) {
 }
 
 func PrintFeed(f *fp.Feed) {
-	title := strings.TrimSpace(f.Title)
+	title := strings.TrimSpace(html.UnescapeString(f.Title))
 	if title == "" {
-		title = "[nameless feed]"
+		title = "No title"
 	}
 	fmt.Printf("\n%s\n", title)
 	for _, i := range f.Items {
-		fmt.Printf(" - [%s](%s)\n", i.Title, i.Link)
+		fmt.Printf(" - [%s](%s)\n", html.UnescapeString(i.Title), i.Link)
 	}
 }
 
