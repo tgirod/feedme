@@ -99,17 +99,17 @@ func (sl *SourceList) Fetch() {
 
 func (s *Source) Fetch(c chan *fp.Feed) {
 	// grab feed
-	log.Printf("Fetching: %s\n", s.Url)
+	//log.Printf("Fetching: %s\n", s.Url)
 	resp, err := http.Get(s.Url)
 	if err != nil {
-		log.Println(err)
+        log.Printf("%s: %s\n", s.Url, err)
 		c <- nil
 		return
 	}
 	// parse feed
 	feed, err := fp.NewFeed(resp.Body)
 	if err != nil {
-		log.Println(err)
+        log.Printf("%s: %s\n", s.Url, err)
 		c <- nil
 		return
 	}
