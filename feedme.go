@@ -143,6 +143,9 @@ func PrintFeed(f *fp.Feed) {
 	}
 	fmt.Printf("\n%s\n", title)
 	for _, i := range f.Items {
+		if strings.HasPrefix(i.Link, "//") {
+			i.Link = "http:" + i.Link
+		}
 		fmt.Printf(" - [%s](%s)\n", html.UnescapeString(i.Title), i.Link)
 	}
 }
