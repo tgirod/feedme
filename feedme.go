@@ -11,7 +11,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
+
+const TIMEOUT = time.Duration(10 * time.Second)
 
 var configFile = flag.String("config", os.ExpandEnv("${HOME}/.feedme"), "config file to use. default is $HOME/.feedme")
 
@@ -100,16 +103,19 @@ func (sl *SourceList) Fetch() {
 func (s *Source) Fetch(c chan *fp.Feed) {
 	// grab feed
 	//log.Printf("Fetching: %s\n", s.Url)
-	resp, err := http.Get(s.Url)
+	client := http.Client{
+		Timeout: TIMEOUT,
+	}
+	resp, err := client.Get(s.Url)
 	if err != nil {
-        log.Printf("%s: %s\n", s.Url, err)
+		//log.Printf("%s: %s\n", s.Url, err)
 		c <- nil
 		return
 	}
 	// parse feed
 	feed, err := fp.NewFeed(resp.Body)
 	if err != nil {
-        log.Printf("%s: %s\n", s.Url, err)
+		//log.Printf("%s: %s\n", s.Url, err)
 		c <- nil
 		return
 	}
