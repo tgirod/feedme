@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	fp "github.com/iand/feedparser"
 	"html"
 	"io"
 	"log"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	fp "github.com/iand/feedparser"
 )
 
 const TIMEOUT = time.Duration(10 * time.Second)
