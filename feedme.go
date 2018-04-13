@@ -152,7 +152,7 @@ func PrintFeed(f *fp.Feed) {
 		if strings.HasPrefix(i.Link, "//") {
 			i.Link = "http:" + i.Link
 		}
-		fmt.Printf(" - [%s](%s)\n", html.UnescapeString(i.Title), i.Link)
+		fmt.Printf(" - %s: %s\n", html.UnescapeString(i.Title), i.Link)
 	}
 }
 
