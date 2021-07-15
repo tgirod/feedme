@@ -91,7 +91,7 @@ func (sl *SourceList) Fetch() {
 	}
 	// print results as they arrive
 	nb := 0
-	for _, _ = range *sl {
+	for range *sl {
 		f := <-c
 		if f != nil {
 			nb++
